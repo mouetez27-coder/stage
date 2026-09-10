@@ -1,6 +1,25 @@
 # facture-front
 
-This template should help get you started developing with Vue 3 in Vite.
+Interface Vue 3 + Vite + TypeScript de la plateforme ELFATOORA.
+
+La documentation complète d'installation et d'exécution se trouve dans [DOCUMENTATION_TECHNIQUE.md](../DOCUMENTATION_TECHNIQUE.md).
+
+## Installation
+
+```powershell
+npm install
+npm run dev
+```
+
+L'interface est disponible sur `http://localhost:5173` et appelle par défaut l'API `http://127.0.0.1:8000/api`.
+
+Pour modifier cette adresse, créer `.env.local` avec `VITE_API_URL`.
+
+## Vérification de production
+
+```powershell
+npm run build
+```
 
 ## Recommended IDE Setup
 
