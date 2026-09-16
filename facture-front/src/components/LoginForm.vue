@@ -53,7 +53,7 @@ async function submitLogin() {
         </div>
 
         <div v-if="errorMessage" class="alert error">
-          <span class="alert-icon">⚠</span>
+          <i class="alert-icon fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
           {{ errorMessage }}
         </div>
 
@@ -100,21 +100,20 @@ async function submitLogin() {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: 100vh;
   width: 100%;
-  padding: 30px;
-  background: #f8fafc;
+  padding: 24px;
+  background: #102f35;
   background-image:
-    radial-gradient(circle at 15% 20%, rgba(30, 41, 59, 0.03) 0%, transparent 40%),
-    radial-gradient(circle at 85% 80%, rgba(30, 41, 59, 0.03) 0%, transparent 40%);
+    linear-gradient(135deg, rgba(231, 183, 91, 0.18), transparent 42%),
+    radial-gradient(circle at 85% 80%, rgba(122, 205, 194, 0.16) 0%, transparent 38%);
 }
 .login-card {
-  width: 650px;
-  max-width: 90%;
-  min-height: 700px;
+  width: min(100%, 440px);
+  min-height: auto;
   background: #ffffff;
-  border-radius: 16px;
-  border: 1px solid #e5e9f0;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
   box-shadow:
     0 4px 12px rgba(15, 23, 42, 0.08),
     0 20px 40px rgba(15, 23, 42, 0.12);
@@ -125,15 +124,15 @@ async function submitLogin() {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 28px 32px 0;
+  padding: 30px 32px 0;
 }
 
 .brand-mark {
   width: 40px;
   height: 40px;
   border-radius: 9px;
-  background: #0f172a;
-  color: #fff;
+  background: var(--color-accent);
+  color: #173a3c;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -152,7 +151,7 @@ async function submitLogin() {
 .brand-name {
   font-size: 15px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-text);
   letter-spacing: 0.3px;
 }
 
@@ -173,8 +172,10 @@ async function submitLogin() {
   margin: 0 0 4px;
   font-size: 20px;
   font-weight: 600;
-  color: #0f172a;
-  letter-spacing: -0.2px;
+  color: var(--color-text);
+  font-size: 25px;
+  font-weight: 750;
+  letter-spacing: -0.04em;
 }
 
 .form-header p {
@@ -228,7 +229,7 @@ button {
   margin-top: 6px;
   border: none;
   border-radius: 8px;
-  background: #0f172a;
+  background: var(--color-primary);
   color: white;
   font-size: 14.5px;
   font-weight: 600;
@@ -238,7 +239,7 @@ button {
 }
 
 button:hover:not(:disabled) {
-  background: #1e293b;
+  background: var(--color-primary-dark);
 }
 
 button:active:not(:disabled) {
@@ -292,6 +293,7 @@ button:disabled {
 }
 
 @media (max-width: 480px) {
+  .login-container { padding: 16px; }
   .brand {
     padding: 22px 24px 0;
   }

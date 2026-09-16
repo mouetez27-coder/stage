@@ -35,6 +35,9 @@ class Invoice extends Model
 
         'pdf_path',
         'xml_path',
+        'signed_at',
+        'signed_xml_path',
+        'signer_dn',
 
         // Champs TEIF
         'document_type',
@@ -53,7 +56,17 @@ class Invoice extends Model
         'due_date' => 'date',
         'sent_at' => 'datetime',
         'acknowledged_at' => 'datetime',
+        'signed_at' => 'datetime',
     ];
+
+    protected $appends = [
+        'is_signed',
+    ];
+
+    public function getIsSignedAttribute(): bool
+    {
+        return !empty($this->signed_at) || !empty($this->signed_xml_path);
+    }
 
     public function company(): BelongsTo
     {

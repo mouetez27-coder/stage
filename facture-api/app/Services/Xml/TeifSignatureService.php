@@ -34,11 +34,78 @@ class TeifSignatureService
 
     private string $certPath;
     private string $keyPath;
+    private ?string $passphrase;
 
-    public function __construct()
+    public function __construct(
+        ?string $certPath = null,
+        ?string $keyPath = null,
+        ?string $passphrase = null
+    ) {
+        try {
+            $configuredCert = $certPath ?? (function_exists('config') ? config('teif.signature_cert_path') : null) ?? 'certs/test-cert.pem';
+            $configuredKey  = $keyPath  ?? (function_exists('config') ? config('teif.signature_key_path') : null) ?? 'certs/test-key.pem';
+            $this->passphrase = $passphrase ?? (function_exists('config') ? config('teif.signature_passphrase') : null);
+        } catch (\Throwable) {
+            $configuredCert = $certPath ?? 'certs/test-cert.pem';
+            $configuredKey  = $keyPath ?? 'certs/test-key.pem';
+            $this->passphrase = $passphrase;
+        }
+
+        $this->certPath = $this->resolvePath($configuredCert);
+        $this->keyPath  = $this->resolvePath($configuredKey);
+    }
+
+    private function resolvePath(string $path): string
     {
-        $this->certPath = base_path(config('teif.signature_cert_path', env('TEIF_SIGNATURE_CERT_PATH', 'certs/test-cert.pem')));
-        $this->keyPath = base_path(config('teif.signature_key_path', env('TEIF_SIGNATURE_KEY_PATH', 'certs/test-key.pem')));
+        if (preg_match('/^([a-zA-Z]:[\\\\\/]|\/|\\\\)/', $path)) {
+            return $path;
+        }
+        return function_exists('base_path') ? base_path($path) : $path;
+    }
+
+    /**
+     * Retourne les métadonnées et la validité du certificat de signature configuré.
+     */
+    public function getSignerCertificateInfo(): array
+    {
+        if (!file_exists($this->certPath)) {
+            throw new RuntimeException("Certificat introuvable à l'emplacement : {$this->certPath}");
+        }
+
+        $certPem = file_get_contents($this->certPath);
+        $certData = openssl_x509_parse($certPem, true);
+        if (!$certData) {
+            throw new RuntimeException('Impossible de lire le certificat X.509.');
+        }
+
+        $now = time();
+        $validFrom = $certData['validFrom_time_t'] ?? null;
+        $validTo = $certData['validTo_time_t'] ?? null;
+
+        $isValid = true;
+        if ($validFrom && $now < $validFrom) {
+            $isValid = false;
+        }
+        if ($validTo && $now > $validTo) {
+            $isValid = false;
+        }
+
+        $derBase64 = $this->pemToDerBase64($certPem);
+        $derBinary = base64_decode($derBase64);
+
+        return [
+            'subject_dn' => $certData['name'] ?? '',
+            'common_name' => $certData['subject']['CN'] ?? '',
+            'organization' => $certData['subject']['O'] ?? '',
+            'country' => $certData['subject']['C'] ?? '',
+            'issuer_dn' => isset($certData['issuer']) ? (is_array($certData['issuer']) ? ($certData['issuer']['name'] ?? json_encode($certData['issuer'])) : $certData['issuer']) : '',
+            'serial_number' => $certData['serialNumber'] ?? '0',
+            'valid_from' => $validFrom ? gmdate('Y-m-d\TH:i:s\Z', $validFrom) : null,
+            'valid_to' => $validTo ? gmdate('Y-m-d\TH:i:s\Z', $validTo) : null,
+            'is_valid' => $isValid,
+            'cert_digest_sha1' => base64_encode(hash('sha1', $derBinary, true)),
+            'cert_digest_sha256' => base64_encode(hash('sha256', $derBinary, true)),
+        ];
     }
 
     /**
@@ -55,7 +122,7 @@ class TeifSignatureService
         $certPem = file_get_contents($this->certPath);
         $keyPem = file_get_contents($this->keyPath);
 
-        $privateKey = openssl_pkey_get_private($keyPem);
+        $privateKey = openssl_pkey_get_private($keyPem, $this->passphrase ?? '');
         if (!$privateKey) {
             throw new RuntimeException('Impossible de charger la clé privée : ' . openssl_error_string());
         }

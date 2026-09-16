@@ -1,25 +1,31 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '../api.js'
+
+const router = useRouter()
+
+const today = new Date().toISOString().split('T')[0]
 
 const form = ref({
   invoice_number: '',
-  invoice_date: '',
+  invoice_date: today,
   due_date: '',
-  payment_method: 'Especes',
+  payment_method: 'Virement',
   currency: 'TND',
 
   client_name: '',
   client_tax_number: '',
   client_address: '',
   client_city: '',
-  client_country: 'TN',   // ← AJOUTER ICI
+  client_postal_code: '1000',
+  client_country: 'TN',
   client_phone: '',
   client_email: '',
 })
 
 const items = ref([
-  { code: '', designation: '', quantity: 1,unit:'PCE', unit_price: 0, vat_rate: 19, discount: 0 }
+  { code: 'ART-01', designation: 'Prestation de service', quantity: 1, unit: 'UNIT', unit_price: 150.000, vat_rate: 19, discount: 0 }
 ])
 
 const successMessage = ref('')
@@ -28,7 +34,7 @@ const errors = ref({})
 const loading = ref(false)
 
 function addItem() {
-  items.value.push({ code: '', designation: '', quantity: 1, unit:'PCE', unit_price: 0, vat_rate: 19, discount: 0 })
+  items.value.push({ code: '', designation: '', quantity: 1, unit: 'UNIT', unit_price: 0, vat_rate: 19, discount: 0 })
 }
 
 function removeItem(index) {
@@ -72,35 +78,44 @@ async function submitInvoice() {
 
     const response = await api.post('/invoices', payload)
 
-    successMessage.value = response.data.message
+    successMessage.value = response.data.message || 'Facture enregistrée avec succès.'
     resetForm()
-  } catch (error) {
-    console.log(error);
-    console.log(error.response);
-    console.log(error.response?.data);
 
-    alert(JSON.stringify(error.response?.data, null, 2));
-}
+    // Redirige vers la liste des factures après un bref instant
+    setTimeout(() => {
+      router.push('/invoices')
+    }, 1200)
+  } catch (error) {
+    if (error.response?.data?.errors) {
+      errors.value = error.response.data.errors
+      errorMessage.value = 'Veuillez vérifier les champs indiqués ci-dessous.'
+    } else {
+      errorMessage.value = error.response?.data?.message || 'Une erreur est survenue lors de la création de la facture.'
+    }
+  } finally {
+    loading.value = false
+  }
 }
 
 function resetForm() {
   form.value = {
-  invoice_number: '',
-  invoice_date: '',
-  due_date: '',
-  payment_method: 'Especes',
-  currency: 'TND',
+    invoice_number: '',
+    invoice_date: today,
+    due_date: '',
+    payment_method: 'Virement',
+    currency: 'TND',
 
-  client_name: '',
-  client_tax_number: '',
-  client_address: '',
-  client_city: '',
-  client_country: 'TN',
-  client_phone: '',
-  client_email: '',
-}
+    client_name: '',
+    client_tax_number: '',
+    client_address: '',
+    client_city: '',
+    client_postal_code: '1000',
+    client_country: 'TN',
+    client_phone: '',
+    client_email: '',
+  }
   items.value = [
-    { code: '', designation: '', quantity: 1, unit:'PCE' , unit_price: 0, vat_rate: 19, discount: 0 }
+    { code: 'ART-01', designation: 'Prestation de service', quantity: 1, unit: 'UNIT', unit_price: 150.000, vat_rate: 19, discount: 0 }
   ]
 }
 </script>
@@ -202,7 +217,7 @@ function resetForm() {
         </div>
       </fieldset>
 
-      <fieldset>
+      <fieldset class="invoice-items-fieldset">
         <legend>Lignes de facture</legend>
 
         <table>
@@ -230,13 +245,17 @@ function resetForm() {
               <td><input v-model.number="item.discount" type="text" step="0.001" min="0" /></td>
               <td class="line-total">{{ lineTotal(item).toFixed(3) }}</td>
               <td>
-                <button type="button" @click="removeItem(index)" class="btn-remove">✕</button>
+                <button type="button" @click="removeItem(index)" class="btn-remove" aria-label="Supprimer cette ligne" title="Supprimer cette ligne">
+                  <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                </button>
               </td>
             </tr>
           </tbody>
         </table>
 
-        <button type="button" @click="addItem" class="btn-add">+ Ajouter une ligne</button>
+        <button type="button" @click="addItem" class="btn-add">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i> Ajouter une ligne
+        </button>
       </fieldset>
 
       <fieldset class="totals">
@@ -248,6 +267,8 @@ function resetForm() {
       </fieldset>
 
       <button type="submit" class="btn-submit" :disabled="loading">
+        <i v-if="!loading" class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+        <i v-else class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
         {{ loading ? 'Enregistrement...' : 'Enregistrer la facture' }}
       </button>
 
@@ -257,27 +278,38 @@ function resetForm() {
 
 <style scoped>
 .invoice-form {
-  width: 900px;
+  width: min(100%, 980px);
+  min-width: 0;
   margin: 0 auto;
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
+  background: var(--color-surface);
+  padding: clamp(18px, 3vw, 34px);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-soft);
 }
 
+.invoice-form > h2 { margin-bottom: 24px; color: var(--color-text); font-size: clamp(24px, 3vw, 32px); font-weight: 750; letter-spacing: -0.04em; }
+
 fieldset {
+  min-width: 0;
+  max-width: 100%;
   margin-bottom: 20px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 15px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 20px;
 }
 
 legend {
   font-weight: bold;
   padding: 0 8px;
+  color: var(--color-primary-dark);
 }
 
+fieldset:nth-of-type(1), fieldset:nth-of-type(2) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; }
+fieldset:nth-of-type(1) legend, fieldset:nth-of-type(2) legend { grid-column: 1 / -1; }
+
 .field {
-  margin-bottom: 10px;
+  margin-bottom: 14px;
   display: flex;
   flex-direction: column;
 }
@@ -285,24 +317,37 @@ legend {
 .field label {
   font-size: 14px;
   margin-bottom: 4px;
-  color: #333;
+  color: #334155;
+  font-weight: 650;
 }
 
 input {
-  padding: 6px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  color: var(--color-text);
+  background: #fbfcfe;
 }
 
-table {
+input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(11, 107, 104, 0.1);
+}
+
+.invoice-items-fieldset { width: 100%; overflow: hidden; }
+.invoice-items-fieldset table {
   width: 100%;
+  min-width: 760px;
   border-collapse: collapse;
   margin-bottom: 10px;
 }
 
-th, td {
-  border: 1px solid #ddd;
-  padding: 6px;
+table th, table td {
+  border: 1px solid var(--color-border);
+  padding: 7px;
   text-align: left;
 }
 
@@ -317,21 +362,55 @@ table input {
 }
 
 .btn-add {
-  background: #2563eb;
+  min-height: 42px;
+  background: var(--color-primary);
   color: white;
   border: none;
-  padding: 8px 14px;
-  border-radius: 4px;
+  padding: 9px 14px;
+  border-radius: 7px;
+  font-weight: 650;
+}
+
+.btn-add:hover { background: var(--color-primary-dark); }
+
+.btn-remove {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  background: #fff1f0;
+  color: #b42318;
+  border: 1px solid #f2b8b5;
+  border-radius: 7px;
   cursor: pointer;
 }
 
-.btn-remove {
-  background: #dc2626;
+.btn-remove:hover { background: #fee4e2; }
+
+.btn-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  background: var(--color-primary);
   color: white;
   border: none;
-  padding: 4px 8px;
-  border-radius: 4px;
-  cursor: pointer;
+  padding: 11px 18px;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.btn-submit:hover:not(:disabled) { background: var(--color-primary-dark); }
+.btn-submit:disabled { opacity: 0.65; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+  .invoice-form { padding: 20px 14px; border-radius: 10px; }
+  fieldset { padding: 16px 12px; }
+  fieldset:nth-of-type(1), fieldset:nth-of-type(2) { display: block; }
+  .invoice-items-fieldset { overflow-x: auto; }
+  .invoice-items-fieldset .btn-add { width: 100%; }
 }
 
 .totals p {
